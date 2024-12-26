@@ -65,6 +65,13 @@ const (
 	// 删除键值
 	DictItemCreatePath = "/api/system/dict/item/create" // 创建键值
 	DictItemDeletePath = "/api/system/dict/item/delete" // 删除键值
+
+	// 菜单管理
+	MenuTreePath   = "/api/system/menu/tree"   // 获取菜单树
+	MenuUserPath   = "/api/system/menu/user"   // 获取用户菜单
+	MenuCreatePath = "/api/system/menu/create" // 创建菜单
+	MenuUpdatePath = "/api/system/menu/update" // 更新菜单
+	MenuDeletePath = "/api/system/menu/delete" // 删除菜单
 )
 
 // 监控中心

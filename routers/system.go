@@ -36,4 +36,11 @@ func InitSystemRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(DictQueryPath, utils.JWTAuth(system.QueryDict))
 	mux.HandleFunc(DictItemCreatePath, utils.JWTAuth(system.CreateDictItem))
 	mux.HandleFunc(DictItemDeletePath, utils.JWTAuth(system.DeleteDictItem))
+
+	// 菜单相关路由
+	mux.HandleFunc(MenuTreePath, utils.JWTAuth(system.GetMenuTree))
+	mux.HandleFunc(MenuUserPath, utils.JWTAuth(system.GetUserMenus))
+	mux.HandleFunc(MenuCreatePath, utils.JWTAuth(system.CreateMenu))
+	mux.HandleFunc(MenuUpdatePath, utils.JWTAuth(system.UpdateMenu))
+	mux.HandleFunc(MenuDeletePath, utils.JWTAuth(system.DeleteMenu))
 }

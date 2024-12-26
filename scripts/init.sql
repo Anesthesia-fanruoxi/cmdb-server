@@ -170,3 +170,88 @@ CREATE TABLE `cmdb`.`dict_${table_name}` (
     UNIQUE KEY `uk_key` (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='${dict_name}';
 */
+
+-- 创建菜单表
+CREATE TABLE IF NOT EXISTS menus (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    created_at  DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at  DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    name        VARCHAR(50) NOT NULL COMMENT '菜单名称',
+    path        VARCHAR(100) COMMENT '前端路由路径',
+    component   VARCHAR(100) COMMENT '前端组件路径',
+    permission  VARCHAR(50) COMMENT '权限标识',
+    parent_id   BIGINT UNSIGNED COMMENT '父菜单ID',
+    sort        INT DEFAULT 0 COMMENT '排序',
+    icon        VARCHAR(50) COMMENT '图标',
+    is_visible  TINYINT(1) DEFAULT 1 COMMENT '是否可见',
+    is_enabled  TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+    KEY `idx_parent_id` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='菜单表';
+
+-- 创建角色-菜单关联表
+CREATE TABLE IF NOT EXISTS role_menus (
+    role_id     BIGINT UNSIGNED NOT NULL COMMENT '角色ID',
+    menu_id     BIGINT UNSIGNED NOT NULL COMMENT '菜单ID',
+    created_at  DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (role_id, menu_id),
+    KEY `idx_role_id` (`role_id`),
+    KEY `idx_menu_id` (`menu_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='角色-菜单关联表';
+
+-- 清空已有的菜单数据
+TRUNCATE TABLE menus;
+TRUNCATE TABLE role_menus;
+
+-- 插入菜单数据
+INSERT INTO menus (id, name, path, component, parent_id, sort, icon, permission, is_visible, is_enabled) VALUES
+-- 一级菜单
+(1, '资产管理', '/assets', 'Layout', NULL, 1, 'Asset', 'assets', 1, 1),
+(2, '监控管理', '/monitor', 'Layout', NULL, 2, 'Monitor', 'monitor', 1, 1),
+(3, '知识库', '/knowledge', 'Layout', NULL, 3, 'Document', 'knowledge', 1, 1),
+(9, '系统管理', '/system', 'Layout', NULL, 9, 'Setting', 'system', 1, 1),
+
+-- 资产管理子菜单
+(11, '线上资产', '/assets/online', 'Layout', 1, 1, 'Cloud', 'assets:online', 1, 1),
+(12, '测试资产', '/assets/test', 'Layout', 1, 2, 'Test', 'assets:test', 1, 1),
+
+-- 线上资产子菜单
+(111, '数据库', '/assets/online/database', 'assets/online/database/index', 11, 1, 'Database', 'assets:online:database', 1, 1),
+(112, '网络', '/assets/online/network', 'assets/online/network/index', 11, 2, 'Network', 'assets:online:network', 1, 1),
+(113, '服务器', '/assets/online/server', 'assets/online/server/index', 11, 3, 'Server', 'assets:online:server', 1, 1),
+
+-- 测试资产子菜单
+(121, '环境预览', '/assets/test/overview', 'assets/test/overview/index', 12, 1, 'Preview', 'assets:test:overview', 1, 1),
+(122, '端口映射', '/assets/test/port-mapping', 'assets/test/port-mapping/index', 12, 2, 'Port', 'assets:test:port-mapping', 1, 1),
+
+-- 监控管理子菜单
+(21, '监控总览', '/monitor/overview', 'monitor/overview/index', 2, 1, 'Dashboard', 'monitor:overview', 1, 1),
+(22, '告警管理', '/monitor/alarm', 'monitor/alarm/index', 2, 2, 'Alarm', 'monitor:alarm', 1, 1),
+(23, '监控配置', '/monitor/config', 'monitor/config/index', 2, 3, 'Setting', 'monitor:config', 1, 1),
+
+-- 知识库子菜单
+(31, '文档管理', '/knowledge/document', 'knowledge/document/index', 3, 1, 'Document', 'knowledge:document', 1, 1),
+
+-- 系统管理子菜单
+(91, '用户管理', '/system/user', 'system/user/index', 9, 1, 'User', 'system:user', 1, 1),
+(92, '角色管理', '/system/role', 'system/role/index', 9, 2, 'Role', 'system:role', 1, 1),
+(93, '部门管理', '/system/dept', 'system/dept/index', 9, 3, 'Dept', 'system:dept', 1, 1),
+(94, '菜单管理', '/system/menu', 'system/menu/index', 9, 4, 'Menu', 'system:menu', 1, 1),
+(95, '字典管理', '/system/dict', 'system/dict/index', 9, 5, 'Dict', 'system:dict', 1, 1);
+
+-- 为超级管理员角色(id=1)分配所有菜单权限
+INSERT INTO role_menus (role_id, menu_id)
+SELECT 1, id FROM menus;
+
+-- 为普通用户角色(id=2)分配基本菜单权限（除了系统管理）
+INSERT INTO role_menus (role_id, menu_id)
+SELECT 2, id FROM menus WHERE parent_id IS NULL AND id != 9
+UNION
+SELECT 2, id FROM menus WHERE parent_id IN (
+    SELECT id FROM menus WHERE parent_id IS NULL AND id != 9
+)
+UNION
+SELECT 2, id FROM menus WHERE parent_id IN (
+    SELECT id FROM menus WHERE parent_id IN (
+        SELECT id FROM menus WHERE parent_id IS NULL AND id != 9
+    )
+);
