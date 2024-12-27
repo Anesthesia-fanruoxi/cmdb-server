@@ -161,8 +161,10 @@ func QueryDict(w http.ResponseWriter, r *http.Request) {
 	// 获取查询参数
 	query := r.URL.Query()
 	tableName := query.Get("table_name")
+	projectsParam := query.Get("projects")
+
 	if tableName == "" {
-		utils.Error(w, http.StatusBadRequest, utils.INVALID_PARAMS, "表名不能为���")
+		utils.Error(w, http.StatusBadRequest, utils.INVALID_PARAMS, "表名不能为空")
 		return
 	}
 
@@ -179,12 +181,57 @@ func QueryDict(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 使用原生SQL查询
-	rows, err := initData.GetDB().Raw(fmt.Sprintf("SELECT %s, %s FROM %s",
-		dictRecord.KeyName,
-		dictRecord.ValueName,
-		tableName,
-	)).Rows()
+	// 构建SQL查询
+	var sqlQuery string
+	var args []interface{}
+
+	// 检查是否指定了projects参数
+	_, projectsSpecified := query["projects"]
+	if projectsSpecified && projectsParam == "" {
+		// 如果指定了projects参数但为空，返回空列表
+		utils.Success(w, []map[string]interface{}{})
+		return
+	}
+
+	if projectsParam != "" {
+		// 如果指定了非空的projects参数，进行过滤
+		projects := strings.Split(projectsParam, ",")
+		placeholders := make([]string, len(projects))
+		for i, p := range projects {
+			placeholders[i] = "?"
+			args = append(args, p)
+		}
+
+		if tableName == "project_dict" {
+			// 项目字典直接使用项目代码过滤
+			sqlQuery = fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s IN (%s)",
+				dictRecord.KeyName,
+				dictRecord.ValueName,
+				tableName,
+				dictRecord.KeyName,
+				strings.Join(placeholders, ","))
+		} else {
+			// 其他字典表通过关联project_dict表进行过滤
+			sqlQuery = fmt.Sprintf(`
+				SELECT DISTINCT d.%s, d.%s 
+				FROM %s d
+				INNER JOIN project_dict pd ON d.project = pd.project
+				WHERE pd.project IN (%s)`,
+				dictRecord.KeyName,
+				dictRecord.ValueName,
+				tableName,
+				strings.Join(placeholders, ","))
+		}
+	} else {
+		// 如果没有指定projects参数，返回所有数据
+		sqlQuery = fmt.Sprintf("SELECT %s, %s FROM %s",
+			dictRecord.KeyName,
+			dictRecord.ValueName,
+			tableName)
+	}
+
+	// 执行查询
+	rows, err := initData.GetDB().Raw(sqlQuery, args...).Rows()
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, utils.ERROR, fmt.Sprintf("查询%s失败", tableName))
 		return

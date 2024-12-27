@@ -15,8 +15,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ClusterServicesRequest 获取集群服务请求结构
+type ClusterServicesRequest struct {
+	Projects []string `json:"projects"` // 项目列表
+}
+
 // GetClusterServices 获取服务端口信息
 func GetClusterServices(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		utils.Error(w, http.StatusMethodNotAllowed, utils.ERROR, "方法不允许")
+		return
+	}
+
+	// 从查询参数获取项目列表
+	projectsParam := r.URL.Query().Get("projects")
+	var projects []string
+	if projectsParam != "" {
+		projects = strings.Split(projectsParam, ",")
+	}
+
 	// 获取k8s客户端
 	k8sClient := initData.GetK8s()
 	if k8sClient == nil {
@@ -55,6 +72,20 @@ func GetClusterServices(w http.ResponseWriter, r *http.Request) {
 		projectDict[dict.Project] = dict.ProjectName
 	}
 
+	// 如果指定了项目列表且列表为空，直接返回空结果
+	if projects != nil && len(projects) == 0 {
+		utils.Success(w, []models.ServicePortResponse{})
+		return
+	}
+
+	// 构建项目过滤集合
+	projectFilter := make(map[string]bool)
+	if len(projects) > 0 {
+		for _, p := range projects {
+			projectFilter[p] = true
+		}
+	}
+
 	// 构建返回数据
 	var result []models.ServicePortResponse
 	for _, svc := range services.Items {
@@ -75,6 +106,11 @@ func GetClusterServices(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		projectKey := parts[0]
+
+		// 如果指定了项目列表，检查当前项目是否在列表中
+		if len(projectFilter) > 0 && !projectFilter[projectKey] {
+			continue
+		}
 
 		// 获取项目名称
 		projectName, ok := projectDict[projectKey]
@@ -100,7 +136,7 @@ func GetClusterServices(w http.ResponseWriter, r *http.Request) {
 			portList = append(portList, portInfo)
 		}
 
-		// 如果没有NodePort端口，跳过这个服务
+		// 如果没��NodePort端口，跳过这个服务
 		if len(portList) == 0 {
 			continue
 		}
@@ -118,8 +154,25 @@ func GetClusterServices(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, result)
 }
 
+// ClusterStatusRequest 获取集群状态请求结构
+type ClusterStatusRequest struct {
+	Projects []string `json:"projects"` // 项目列表
+}
+
 // GetClusterStatus 获取所有命名空间的Pod状态
 func GetClusterStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		utils.Error(w, http.StatusMethodNotAllowed, utils.ERROR, "方法不允许")
+		return
+	}
+
+	// 从查询参数获取项目列表
+	projectsParam := r.URL.Query().Get("projects")
+	var projects []string
+	if projectsParam != "" {
+		projects = strings.Split(projectsParam, ",")
+	}
+
 	// 获取k8s客户端
 	k8sClient := initData.GetK8s()
 	if k8sClient == nil {
@@ -132,6 +185,20 @@ func GetClusterStatus(w http.ResponseWriter, r *http.Request) {
 	if cfg == nil {
 		utils.Error(w, http.StatusInternalServerError, utils.ERROR, "获取配置失败")
 		return
+	}
+
+	// 如果指定了项目列表且列表为空，直接返回空结果
+	if projects != nil && len(projects) == 0 {
+		utils.Success(w, []models.NamespaceStatusResponse{})
+		return
+	}
+
+	// 构建项目过滤集合
+	projectFilter := make(map[string]bool)
+	if len(projects) > 0 {
+		for _, p := range projects {
+			projectFilter[p] = true
+		}
 	}
 
 	// 获取所有Pod
@@ -222,7 +289,7 @@ func GetClusterStatus(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// 检查namespace是否包含service或middleware
+		// 检查namespace是否包含service
 		nsLower := strings.ToLower(ns.Name)
 		if !strings.Contains(nsLower, "service") {
 			continue
@@ -234,6 +301,11 @@ func GetClusterStatus(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		projectKey := parts[0]
+
+		// 如果指定了项目列表，检查当前项目是否在列表中
+		if len(projectFilter) > 0 && !projectFilter[projectKey] {
+			continue
+		}
 
 		// 获取项目名称
 		projectName, ok := projectDict[projectKey]
@@ -249,17 +321,24 @@ func GetClusterStatus(w http.ResponseWriter, r *http.Request) {
 		status.Project = projectKey
 		status.ProjectName = projectName
 		status.Namespace = ns.Name
-		status.HasPods = nsHasPods[ns.Name]
 		status.SubDomain = subDomain
+		status.HasPods = nsHasPods[ns.Name]
 
-		// 如果有操作记录，添加操作信息
+		// 添加操作记录
 		if op, exists := nsOperations[ns.Name]; exists {
-			status.ActionUserName = &op.ActionUserName
-			status.ActionTime = &op.ActionTime
-			status.ActionTimestamp = &op.ActionTimestamp
-			status.OperatUserName = &op.OperatUserName
-			status.OperationTime = &op.OperationTime
-			status.OperationTimestamp = &op.OperationTimestamp
+			actionUserName := op.ActionUserName
+			actionTime := op.ActionTime
+			actionTimestamp := op.ActionTimestamp
+			operatUserName := op.OperatUserName
+			operationTime := op.OperationTime
+			operationTimestamp := op.OperationTimestamp
+
+			status.ActionUserName = &actionUserName
+			status.ActionTime = &actionTime
+			status.ActionTimestamp = &actionTimestamp
+			status.OperatUserName = &operatUserName
+			status.OperationTime = &operationTime
+			status.OperationTimestamp = &operationTimestamp
 		}
 
 		result = append(result, status)

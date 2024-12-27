@@ -43,18 +43,22 @@ const (
 	UserLogoutPath = "/api/system/user/logout" // 用户登录
 
 	// 角色管理
-	RoleListPath   = "/api/system/role/list"   // 角色列表
-	RoleCreatePath = "/api/system/role/create" // 创建角色
-	RoleUpdatePath = "/api/system/role/update" // 更新角色
-	RoleDeletePath = "/api/system/role/delete" // 删除角色
-	RoleDetailPath = "/api/system/role/detail" // 角色详情
+	RoleListPath    = "/api/system/role/list"         // 角色列表
+	RoleCreatePath  = "/api/system/role/create"       // 创建角色
+	RoleUpdatePath  = "/api/system/role/update"       // 更新角色
+	RoleDeletePath  = "/api/system/role/delete"       // 删除角色
+	RoleDetailPath  = "/api/system/role/detail"       // 角色详情
+	RoleGetMenuPath = "/api/system/role/menus"        // 获取角色菜单权限
+	RoleSetMenuPath = "/api/system/role/menus/update" // 更新角色菜单权限
 
 	// 部门管理
-	DeptListPath   = "/api/system/dept/list"   // 部门列表
-	DeptCreatePath = "/api/system/dept/create" // 创建部门
-	DeptUpdatePath = "/api/system/dept/update" // 更新部门
-	DeptDeletePath = "/api/system/dept/delete" // 删除部门
-	DeptDetailPath = "/api/system/dept/detail" // 部门详情
+	DeptListPath           = "/api/system/dept/list"           // 部门列表
+	DeptCreatePath         = "/api/system/dept/create"         // 创建部门
+	DeptUpdatePath         = "/api/system/dept/update"         // 更新部门
+	DeptDeletePath         = "/api/system/dept/delete"         // 删除部门
+	DeptDetailPath         = "/api/system/dept/detail"         // 部门详情
+	GetDeptProjectsPath    = "/api/system/dept/project"        // 获取部门项目关联
+	UpdateDeptProjectsPath = "/api/system/dept/project/update" // 更新部门项目关联
 
 	// 字典管理
 	DictListPath   = "/api/system/dict/list"   // 字典列表

@@ -6,15 +6,14 @@ import (
 
 // Department 部门模型
 type Department struct {
-	ID          uint      `json:"id" gorm:"primarykey"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Name        string    `json:"name" gorm:"type:varchar(50);not null;comment:部门名称"`
-	Code        string    `json:"code" gorm:"type:varchar(50);not null;uniqueIndex;comment:部门编码"`
-	Description string    `json:"description" gorm:"type:varchar(255);comment:描述"`
-	ParentID    *uint     `json:"parent_id" gorm:"comment:父部门ID"`
-	Sort        int       `json:"sort" gorm:"type:int;default:0;comment:排序"`
-	IsEnabled   bool      `json:"is_enabled" gorm:"type:tinyint(1);default:1;comment:是否启用"`
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	Name        string    `json:"name" gorm:"not null"`
+	Code        string    `json:"code" gorm:"not null;unique"`
+	Description string    `json:"description"`
+	ParentID    *uint     `json:"parent_id"`
+	Sort        int       `json:"sort" gorm:"default:0"`
+	CreatedAt   time.Time `json:"created_at" gorm:"not null;default:CURRENT_TIMESTAMP(3)"`
+	UpdatedAt   time.Time `json:"updated_at" gorm:"not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)"`
 }
 
 // TableName 指定表名

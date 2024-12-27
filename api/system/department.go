@@ -15,6 +15,7 @@ type DepartmentResponse struct {
 	Code        string `json:"code"`
 	ParentID    *uint  `json:"parent_id"`
 	Description string `json:"description"`
+	Sort        int    `json:"sort"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
@@ -27,6 +28,7 @@ func convertToDepartmentResponse(dept models.Department) DepartmentResponse {
 		Code:        dept.Code,
 		ParentID:    dept.ParentID,
 		Description: dept.Description,
+		Sort:        dept.Sort,
 		CreatedAt:   dept.CreatedAt.Format("2006-01-02 15:04:05"),
 		UpdatedAt:   dept.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
@@ -40,7 +42,7 @@ func ListDepartments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var departments []models.Department
-	if err := initData.GetDB().Find(&departments).Error; err != nil {
+	if err := initData.GetDB().Order("sort").Find(&departments).Error; err != nil {
 		utils.Error(w, http.StatusInternalServerError, utils.ERROR, "获取部门列表失败")
 		return
 	}
@@ -57,7 +59,7 @@ func ListDepartments(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// CreateDepartment 创建部门
+// CreateDepartments 创建部门
 func CreateDepartments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		utils.Error(w, http.StatusMethodNotAllowed, utils.ERROR, "方法不允许")
@@ -88,15 +90,6 @@ func CreateDepartments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 如果指定了父部门，检查父部门是否存在
-	if dept.ParentID != nil && *dept.ParentID != 0 {
-		var parent models.Department
-		if err := initData.GetDB().First(&parent, *dept.ParentID).Error; err != nil {
-			utils.Error(w, http.StatusBadRequest, utils.INVALID_PARAMS, "父部门不存在")
-			return
-		}
-	}
-
 	// 创建部门
 	if err := initData.GetDB().Create(&dept).Error; err != nil {
 		utils.Error(w, http.StatusInternalServerError, utils.ERROR, "创建部门失败")
@@ -106,7 +99,7 @@ func CreateDepartments(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, convertToDepartmentResponse(dept))
 }
 
-// UpdateDepartment 更新部门
+// UpdateDepartments 更新部门
 func UpdateDepartments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		utils.Error(w, http.StatusMethodNotAllowed, utils.ERROR, "方法不允许")
@@ -131,8 +124,8 @@ func UpdateDepartments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 如果修改了部门编码，检查新编码是否已存在
-	if dept.Code != "" && dept.Code != existingDept.Code {
+	// 如果修改了编码，检查新编码是否已存在
+	if dept.Code != existingDept.Code {
 		var count int64
 		if err := initData.GetDB().Model(&models.Department{}).Where("code = ? AND id != ?", dept.Code, dept.ID).Count(&count).Error; err != nil {
 			utils.Error(w, http.StatusInternalServerError, utils.ERROR, "更新部门失败")
@@ -145,36 +138,28 @@ func UpdateDepartments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 如果指定了父部门，检查父部门是否存在且不是自己
-	if dept.ParentID != nil && *dept.ParentID != 0 {
-		if *dept.ParentID == dept.ID {
-			utils.Error(w, http.StatusBadRequest, utils.INVALID_PARAMS, "父部门不能是自己")
-			return
-		}
-
-		var parent models.Department
-		if err := initData.GetDB().First(&parent, *dept.ParentID).Error; err != nil {
-			utils.Error(w, http.StatusBadRequest, utils.INVALID_PARAMS, "父部门不存在")
-			return
-		}
-	}
-
-	// 更新部门
-	if err := initData.GetDB().Model(&existingDept).Updates(dept).Error; err != nil {
+	// 更新部门信息
+	if err := initData.GetDB().Model(&dept).Updates(map[string]interface{}{
+		"name":        dept.Name,
+		"code":        dept.Code,
+		"description": dept.Description,
+		"parent_id":   dept.ParentID,
+		"sort":        dept.Sort,
+	}).Error; err != nil {
 		utils.Error(w, http.StatusInternalServerError, utils.ERROR, "更新部门失败")
 		return
 	}
 
 	// 重新查询完整的部门信息
-	if err := initData.GetDB().First(&existingDept, dept.ID).Error; err != nil {
+	if err := initData.GetDB().First(&dept, dept.ID).Error; err != nil {
 		utils.Error(w, http.StatusInternalServerError, utils.ERROR, "获取更新后的部门信息失败")
 		return
 	}
 
-	utils.Success(w, convertToDepartmentResponse(existingDept))
+	utils.Success(w, convertToDepartmentResponse(dept))
 }
 
-// DeleteDepartment 删除部门
+// DeleteDepartments 删除部门
 func DeleteDepartments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		utils.Error(w, http.StatusMethodNotAllowed, utils.ERROR, "方法不允许")

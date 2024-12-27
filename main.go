@@ -25,8 +25,8 @@ func main() {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
 
-	// 初始化Redis
-	if err := initData.InitRedis(&cfg.Redis); err != nil {
+	// 初始化Redis连接（包含角色权限初始化）
+	if err := initData.InitRedis(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB); err != nil {
 		log.Fatalf("初始化Redis失败: %v", err)
 	}
 
